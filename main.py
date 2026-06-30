@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from collections import deque
 import uuid
 import time
-from collections import deque
 
 EMAIL = "22f2001139@ds.study.iitm.ac.in"
 
@@ -11,9 +11,8 @@ ALLOWED_ORIGIN = "https://app-351zh2.example.com"
 RATE_LIMIT = 12
 WINDOW = 10
 
-app = FastAPI()
+app = FastAPI(title="Middleware API")
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -27,9 +26,8 @@ app.add_middleware(
 rate_store = {}
 
 
-# Request ID middleware
 @app.middleware("http")
-async def request_id_middleware(request: Request, call_next):
+async def request_context(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID")
 
     if not request_id:
@@ -44,10 +42,8 @@ async def request_id_middleware(request: Request, call_next):
     return response
 
 
-# Rate limiter
 @app.middleware("http")
-async def rate_limit_middleware(request: Request, call_next):
-
+async def rate_limit(request: Request, call_next):
     client = request.headers.get("X-Client-Id", "default")
 
     now = time.time()
@@ -66,6 +62,11 @@ async def rate_limit_middleware(request: Request, call_next):
     q.append(now)
 
     return await call_next(request)
+
+
+@app.get("/")
+async def root():
+    return {"message": "Middleware API running"}
 
 
 @app.get("/ping")
