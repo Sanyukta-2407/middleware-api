@@ -20,9 +20,12 @@ app = FastAPI(title="Middleware API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=False,
-    allow_methods=["GET", "OPTIONS"],
+    allow_origins=[
+        "https://app-351zh2.example.com",
+        "https://exam.sanand.workers.dev",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["X-Request-ID"],
 )
