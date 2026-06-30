@@ -16,12 +16,13 @@ app = FastAPI(title="Middleware API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://app-351zh2.example.com",
+        ALLOWED_ORIGIN,
         "https://exam.sanand.workers.dev",
     ],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Request-ID"],
 )
 
 rate_store = {}
@@ -55,10 +56,12 @@ async def rate_limit(request: Request, call_next):
         q.popleft()
 
     if len(q) >= RATE_LIMIT:
-        return JSONResponse(
+        response = JSONResponse(
             status_code=429,
             content={"detail": "Rate limit exceeded"},
         )
+        response.headers["X-Request-ID"] = request.state.request_id
+        return response
 
     q.append(now)
 
@@ -72,7 +75,15 @@ async def root():
 
 @app.get("/ping")
 async def ping(request: Request):
-    return {
-        "email": EMAIL,
-        "request_id": request.state.request_id,
-    }
+    request_id = request.state.request_id
+
+    response = JSONResponse(
+        content={
+            "email": EMAIL,
+            "request_id": request_id,
+        }
+    )
+
+    response.headers["X-Request-ID"] = request_id
+
+    return response
