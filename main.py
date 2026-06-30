@@ -20,12 +20,9 @@ app = FastAPI(title="Middleware API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://app-351zh2.example.com",
-        "https://exam.sanand.workers.dev",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["X-Request-ID"],
 )
@@ -36,6 +33,7 @@ rate_store = {}
 @app.middleware("http")
 async def request_context(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID")
+
     if not request_id:
         request_id = str(uuid.uuid4())
 
@@ -44,12 +42,14 @@ async def request_context(request: Request, call_next):
     response = await call_next(request)
 
     response.headers["X-Request-ID"] = request_id
+
     return response
 
 
 @app.middleware("http")
 async def rate_limit(request: Request, call_next):
     client_id = request.headers.get("X-Client-Id", "default")
+
     now = time.time()
 
     q = rate_store.setdefault(client_id, deque())
@@ -68,6 +68,11 @@ async def rate_limit(request: Request, call_next):
     q.append(now)
 
     return await call_next(request)
+
+
+@app.options("/ping")
+async def ping_options():
+    return JSONResponse(content={})
 
 
 @app.get("/")
